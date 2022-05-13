@@ -1,3 +1,4 @@
 # cli_tools
 Learning rust by creating certain command line tools.
-Its also going to help with with cross platform b/c in windows you cant do `rm -rf` you have to do `rm -r -Force`.
+<br>
+It is also going to help with with cross platform because in windows you can't do `rm -rf` you have to do `rm -r -Force`.
