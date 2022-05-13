@@ -6,16 +6,17 @@ fn main() {
     args.remove(0);
     let args = args; // makiing immutable now
     if args.is_empty() {
-            print!("");
+            println!("");
             exit(0); 
         }
-    let (index, no_newlinem, use_escape_char) = find_args(&args);
+    let (index, no_newline, use_escape_char) = find_args(&args);
     let mut to_print = match index {
         -1 => String::from(""),
         _ => vec_to_string(&args, index.try_into().unwrap()),
     };
+    println!("{}", no_newline);
     to_print = format_print(&mut to_print, use_escape_char);
-    println!("final output = {}", to_print);
+    print!("{}{}", to_print, if no_newline {""} else {"\n"});
     
 }
 
@@ -72,8 +73,7 @@ fn format_print(output: &mut String, use_escape_char: bool) -> String {
             if indexs == output.len() -1 {
                 println!("final iter");
 
-                returns.push_str(do_slash_count((slash_count + 1 ), &mut slashes));
-                println!("{}", do_slash_count((slash_count + 1 ), &mut slashes));
+                returns.push_str(do_slash_count(slash_count + 1 , &mut slashes));
                 break;
             }
             slash_count += 1;
@@ -81,45 +81,65 @@ fn format_print(output: &mut String, use_escape_char: bool) -> String {
         }
         
         if use_escape_char {
-            println!("using esc {}", chars);
                 match chars {
+                    // TODO: find the proper slash count for -e
                     'a'  => {
                         if slash_count > 1 {
-                            // make noise
+                            returns.push_str(do_slash_count(slash_count, &mut slashes ));
+                            returns.push('\x07') // /x07 is the escape character for "bell" in unicode/assci https://en.wikipedia.org/wiki/Bell_character
                         } else {
                             returns.push(chars) 
                         }
+                        slash_count = 0;
                     },
                     'b' => {
                         if slash_count > 1 {
-                            // make noise
+                            returns.push_str(do_slash_count(slash_count, &mut slashes ));
+                            returns.remove(returns.len() -1);
+
                         } else {
                             returns.push(chars) 
                         }
+                        slash_count = 0;
                     }, 
                     'c' => {
                         if slash_count > 1 {
-                            // make noise
+                            returns.push_str(do_slash_count(slash_count, &mut slashes ));
+                            return returns;
+                            
                         } else {
                             returns.push(chars) 
                         }
+                        slash_count = 0;
+                    },
+                    'r' => {
+                        if slash_count > 1 {
+                            returns.push_str(do_slash_count(slash_count, &mut slashes ));
+                            returns.push('\r');
+                            
+                        } else {
+                            returns.push(chars) 
+                        }
+                        slash_count = 0;
                     },
 
                     _ => {
-                        println!("slash count in _ {}: ", slash_count,);
                         if slash_count > 1 {
-                            println!("adding with random characters");
-                            // println!("{}", do_slash_count(slash_count, &mut slashes ));
                             returns.push_str(do_slash_count(slash_count, &mut slashes ));
-                            println!("{}", returns);
                         }
                         returns.push(chars);
-                        
+                        slash_count = 0;
                     }
+
                 }
-                slash_count = 0;
+                
         } else {
+            if slash_count > 1 {
+                returns.push_str(do_slash_count(slash_count, &mut slashes ));
+                
+            }
             returns.push(chars);
+            slash_count = 0;
         }
     }
     returns
@@ -127,8 +147,7 @@ fn format_print(output: &mut String, use_escape_char: bool) -> String {
 
 fn do_slash_count(slash_count: i32, returnss: &mut String  ) ->  &str {
     returnss.clear();
-    println!("slash count: {}", slash_count);
-    // returnss = String::new();
+    
     let num_slashs_to_display = 
     if slash_count % 2 == 0 {
         slash_count - slash_count / 2
@@ -136,7 +155,8 @@ fn do_slash_count(slash_count: i32, returnss: &mut String  ) ->  &str {
         slash_count - 1 - slash_count / 2
     };
     for num in 0..num_slashs_to_display {
-        returnss.push('\\');
+        returnss.push('\\')
     }
+
     returnss
 } 
