@@ -1,4 +1,4 @@
-use std::{env, process::exit};
+use std::{env::consts::OS, env, process::exit, io};
 
 fn main() {
     let mut args: Vec<String> = env::args().collect();
@@ -70,6 +70,12 @@ fn format_print(output: &mut String, use_escape_char: bool) -> String {
         if use_escape_char {
             if chars == '\\' {
                 if indexs == output.len() -1 {
+                    let mut it = String::new();
+                    if slash_count % 2 != 0 {
+                        println!("> {}", io::stdin().read_line(&mut it).expect("Failed to read line"));
+
+
+                    }
                     returns.push_str(do_slash_count(slash_count + 1 , &mut slashes));
                     break;
                 }
