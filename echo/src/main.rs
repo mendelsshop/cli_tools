@@ -14,7 +14,6 @@ fn main() {
         -1 => String::from(""),
         _ => vec_to_string(&args, index.try_into().unwrap()),
     };
-    println!("{}", no_newline);
     to_print = format_print(&mut to_print, use_escape_char);
     print!("{}{}", to_print, if no_newline {""} else {"\n"});
     
@@ -68,21 +67,18 @@ fn format_print(output: &mut String, use_escape_char: bool) -> String {
     let mut slashes = String::new();
 
     for (indexs, chars) in output.chars().enumerate() {
-        println!("{}, ", chars);
-        if chars == '\\' {
-            if indexs == output.len() -1 {
-                println!("final iter");
-
-                returns.push_str(do_slash_count(slash_count + 1 , &mut slashes));
-                break;
-            }
-            slash_count += 1;
-            continue;
-        }
-        
         if use_escape_char {
-                match chars {
-                    // TODO: find the proper slash count for -e
+            if chars == '\\' {
+                if indexs == output.len() -1 {
+                    returns.push_str(do_slash_count(slash_count + 1 , &mut slashes));
+                    break;
+                }
+                slash_count += 1;
+                continue;
+            }
+            match chars {
+                    // TODO #0: find the proper slash count for -e
+                    // TODO #1: create a funtion to do what each match brach does
                     'a'  => {
                         if slash_count > 1 {
                             returns.push_str(do_slash_count(slash_count, &mut slashes ));
@@ -98,7 +94,7 @@ fn format_print(output: &mut String, use_escape_char: bool) -> String {
                             returns.remove(returns.len() -1);
 
                         } else {
-                            returns.push(chars) 
+                            returns.push(chars);
                         }
                         slash_count = 0;
                     }, 
@@ -108,7 +104,17 @@ fn format_print(output: &mut String, use_escape_char: bool) -> String {
                             return returns;
                             
                         } else {
-                            returns.push(chars) 
+                            returns.push(chars);
+                        }
+                        slash_count = 0;
+                    },
+                    'n' => {
+                        if slash_count > 1 {
+                            returns.push_str(do_slash_count(slash_count, &mut slashes ));
+                            returns.push('\n');
+                            
+                        } else {
+                            returns.push(chars);
                         }
                         slash_count = 0;
                     },
@@ -118,11 +124,20 @@ fn format_print(output: &mut String, use_escape_char: bool) -> String {
                             returns.push('\r');
                             
                         } else {
-                            returns.push(chars) 
+                            returns.push(chars);
                         }
                         slash_count = 0;
                     },
-
+                    't' => {
+                        if slash_count > 1 {
+                            returns.push_str(do_slash_count(slash_count, &mut slashes ));
+                            returns.push('\t');
+                            
+                        } else {
+                            returns.push(chars);
+                        }
+                        slash_count = 0;
+                    },
                     _ => {
                         if slash_count > 1 {
                             returns.push_str(do_slash_count(slash_count, &mut slashes ));
@@ -134,14 +149,9 @@ fn format_print(output: &mut String, use_escape_char: bool) -> String {
                 }
                 
         } else {
-            if slash_count > 1 {
-                returns.push_str(do_slash_count(slash_count, &mut slashes ));
-                
-            }
             returns.push(chars);
-            slash_count = 0;
-        }
-    }
+        } 
+    } 
     returns
 }
 
@@ -154,7 +164,7 @@ fn do_slash_count(slash_count: i32, returnss: &mut String  ) ->  &str {
     } else {
         slash_count - 1 - slash_count / 2
     };
-    for num in 0..num_slashs_to_display {
+    for _num in 0..num_slashs_to_display {
         returnss.push('\\')
     }
 
