@@ -1,8 +1,4 @@
-use std::{
-    env,
-    io::{self, Write},
-    process::exit,
-};
+use std::{env, process::exit};
 
 fn main() {
     let mut args: Vec<String> = env::args().collect(); // have to fihure out how to handle diffferent shells handling of \\
@@ -18,7 +14,11 @@ fn main() {
         -1 => String::from(""),
         _ => vec_to_string(&args, index.try_into().unwrap()),
     };
-    to_print = format_print(&mut to_print, use_escape_char);
+    if use_escape_char {
+        to_print = format_print(&mut to_print);
+    } else {
+        // to_print = to_print.replace("\\\\", "\\"); // backslash
+    }
     print!("{}{}", to_print, if no_newline { "" } else { "\n" });
 }
 
@@ -61,124 +61,43 @@ fn vec_to_string(args: &Vec<String>, index: usize) -> String {
     }
     output
 }
+fn format_print(output: &mut String) -> String {
+    // some of this was adapted from https://codereview.stackexchange.com/questions/230429/rust-echo-implementation-that-supports-command-line-options
+    let mut output = String::from(output.as_str());
+    output = output.replace("\\\\", "\\"); // backslash
+    output = output.replace("\\a", "\x07"); // alert (BEL)
+    output = output.replace("\\b", "\x08"); // backspace
+    output = output.replace("\\e", "\x1B"); // escape
+    output = output.replace("\\f", "\x0c"); // form feed
+    output = output.replace("\\n", "\n"); // new line
+    output = output.replace("\\r", "\r"); // carriage return
+    output = output.replace("\\t", "\t"); // horizontal tab
+    output = output.replace("\\v", "\x0b"); // vertical tab
 
-fn format_print(output: &mut String, use_escape_char: bool) -> String {
-    let mut slash_count = 0;
-    let mut returns = String::new();
-    let mut slashes = String::new();
-    // println!("{output}");
-
-    for (indexs, chars) in output.chars().enumerate() {
-        if use_escape_char {
-            if chars == '\\' {
-                if indexs == output.len() - 1 {
-                    // for places where uneven slashes != new line prompt
-                    if slash_count % 2 == 0 {
-                        let mut it: String = String::new();
-                        print!("> ");
-                        io::stdout().flush().expect("Couldn't flush stdout");
-                        io::stdin().read_line(&mut it).expect("Failed to read line");
-                        it.pop();
-                        it.pop();
-                        returns.push_str(do_slash_count(slash_count + 1, &mut slashes));
-                        returns.push_str(format_print(&mut it,use_escape_char).as_str());
-                        break;
-
-                        // println!("output {}", output);
-                    }
-                    returns.push_str(do_slash_count(slash_count + 1, &mut slashes));
-                    break;
-                }
-                slash_count += 1;
-                continue;
-            }
-            match chars {
-                // TODO #0: find the proper slash count for -e
-                // TODO #1: create a funtion to do what each match brach does
-                'a' => {
-                    println!("in a {slash_count}" );
-                    if slash_count > 1 {
-                        returns.push_str(do_slash_count(slash_count, &mut slashes));
-                        returns.push('\x07') // /x07 is the escape character for "bell" in unicode/assci https://en.wikipedia.org/wiki/Bell_character
-                    } else {
-                        returns.push(chars)
-                    }
-                    slash_count = 0;
-                }
-                'b' => {
-                    if slash_count > 1 {
-                        returns.push_str(do_slash_count(slash_count, &mut slashes));
-                        returns.remove(returns.len() - 1);
-                    } else {
-                        returns.push(chars);
-                    }
-                    slash_count = 0;
-                }
-                'c' => {
-                    if slash_count > 1 {
-                        returns.push_str(do_slash_count(slash_count, &mut slashes));
-                        return returns;
-                    } else {
-                        returns.push(chars);
-                    }
-                    slash_count = 0;
-                }
-                'n' => {
-                    if slash_count > 1 {
-                        returns.push_str(do_slash_count(slash_count, &mut slashes));
-                        returns.push('\n');
-                    } else {
-                        returns.push(chars);
-                    }
-                    slash_count = 0;
-                }
-                'r' => {
-                    if slash_count > 1 {
-                        returns.push_str(do_slash_count(slash_count, &mut slashes));
-                        returns.push('\r');
-                    } else {
-                        returns.push(chars);
-                    }
-                    slash_count = 0;
-                }
-                't' => {
-                    if slash_count > 1 {
-                        returns.push_str(do_slash_count(slash_count, &mut slashes));
-                        returns.push('\t');
-                    } else {
-                        returns.push(chars);
-                    }
-                    slash_count = 0;
-                }
-                _ => {
-                    if slash_count > 1 {
-                        returns.push_str(do_slash_count(slash_count, &mut slashes));
-                    }
-                    returns.push(chars);
-                    slash_count = 0;
-                }
-            }
-        } else {
-            returns.push(chars);
-        }
-    }
-    returns
-}
-
-fn do_slash_count(slash_count: i32, returnss: &mut String) -> &str {
-    
-    returnss.clear();
-    let mut count = 0;
-    for i in 0..slash_count {
-        count += 1;
-        if count == 4 {
-            returnss.push('\\');
-            count = 0;
-        } else if count > 1 && i == slash_count-1 {
-            returnss.push('\\');
-        }
+    if output.starts_with("\\x") && 3 <= output.len() && output.len() <= 4 {
+        // Hex values with at most 2 digits
+        let value = output.trim_start_matches("\\x");
+        let chr = u8::from_str_radix(value, 16).unwrap() as char;
+        output.push_str(chr.to_string().as_str());
     }
 
-    returnss
-}
+    if output.starts_with("\\0") && 3 <= output.len() && output.len() <= 5 {
+        // Octal values with at most 3 digits
+        let value = output.trim_start_matches("\\0");
 
+        let chr = u8::from_str_radix(value, 8);
+        // The maximum octal value for a byte is 377.
+        // Check that this conversion was successful.
+        if chr.is_ok() {
+            let x = chr.unwrap() as char;
+            output.push(x);
+        }
+    }
+    let index = output.find("\\c");
+    if index == None {
+    } else {
+        let index = index.unwrap();
+        return String::from(&output[0..index]);
+    }
+    output
+}
