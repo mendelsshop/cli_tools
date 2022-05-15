@@ -1,4 +1,9 @@
-use std::{env, env::consts::OS, io, process::exit};
+use std::{
+    env,
+    env::consts::OS,
+    io::{self, Write},
+    process::exit,
+};
 
 fn main() {
     let mut args: Vec<String> = env::args().collect();
@@ -64,13 +69,19 @@ fn format_print(output: &mut String, use_escape_char: bool) -> String {
     let mut slashes = String::new();
 
     for (indexs, chars) in output.chars().enumerate() {
+        println!(" char {}", chars);
         if use_escape_char {
             if chars == '\\' {
                 if indexs == output.len() - 1 {
-                    let mut it: String = String::new();
+                    // for places where uneven slashes != new line prompt
                     if slash_count % 2 == 0 {
-                        print!(">");
+                        let mut it: String = String::new();
+                        print!("> ");
+                        io::stdout().flush().expect("Couldn't flush stdout");
                         io::stdin().read_line(&mut it).expect("Failed to read line");
+                        output.push_str(it.as_str());
+
+                        println!("output {}", output);
                     }
                     returns.push_str(do_slash_count(slash_count + 1, &mut slashes));
                     break;
