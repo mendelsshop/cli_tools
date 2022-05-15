@@ -1,12 +1,11 @@
 use std::{
     env,
-    env::consts::OS,
     io::{self, Write},
     process::exit,
 };
 
 fn main() {
-    let mut args: Vec<String> = env::args().collect();
+    let mut args: Vec<String> = env::args().collect(); // have to fihure out how to handle diffferent shells handling of \\
 
     args.remove(0);
     let args = args; // makiing immutable now
@@ -67,9 +66,9 @@ fn format_print(output: &mut String, use_escape_char: bool) -> String {
     let mut slash_count = 0;
     let mut returns = String::new();
     let mut slashes = String::new();
+    // println!("{output}");
 
     for (indexs, chars) in output.chars().enumerate() {
-        println!(" char {}", chars);
         if use_escape_char {
             if chars == '\\' {
                 if indexs == output.len() - 1 {
@@ -79,9 +78,13 @@ fn format_print(output: &mut String, use_escape_char: bool) -> String {
                         print!("> ");
                         io::stdout().flush().expect("Couldn't flush stdout");
                         io::stdin().read_line(&mut it).expect("Failed to read line");
-                        output.push_str(it.as_str());
+                        it.pop();
+                        it.pop();
+                        returns.push_str(do_slash_count(slash_count + 1, &mut slashes));
+                        returns.push_str(format_print(&mut it,use_escape_char).as_str());
+                        break;
 
-                        println!("output {}", output);
+                        // println!("output {}", output);
                     }
                     returns.push_str(do_slash_count(slash_count + 1, &mut slashes));
                     break;
@@ -93,6 +96,7 @@ fn format_print(output: &mut String, use_escape_char: bool) -> String {
                 // TODO #0: find the proper slash count for -e
                 // TODO #1: create a funtion to do what each match brach does
                 'a' => {
+                    println!("in a {slash_count}" );
                     if slash_count > 1 {
                         returns.push_str(do_slash_count(slash_count, &mut slashes));
                         returns.push('\x07') // /x07 is the escape character for "bell" in unicode/assci https://en.wikipedia.org/wiki/Bell_character
@@ -162,16 +166,19 @@ fn format_print(output: &mut String, use_escape_char: bool) -> String {
 }
 
 fn do_slash_count(slash_count: i32, returnss: &mut String) -> &str {
+    
     returnss.clear();
-
-    let num_slashs_to_display = if slash_count % 2 == 0 {
-        slash_count - slash_count / 2
-    } else {
-        slash_count - 1 - slash_count / 2
-    };
-    for _num in 0..num_slashs_to_display {
-        returnss.push('\\')
+    let mut count = 0;
+    for i in 0..slash_count {
+        count += 1;
+        if count == 4 {
+            returnss.push('\\');
+            count = 0;
+        } else if count > 1 && i == slash_count-1 {
+            returnss.push('\\');
+        }
     }
 
     returnss
 }
+
